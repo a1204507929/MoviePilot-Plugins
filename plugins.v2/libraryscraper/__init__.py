@@ -380,7 +380,7 @@ def __scrape_dir(self, path: Path, mtype: MediaType):
     
     # 检查图片文件存在性（支持 jpg/png 格式）
     image_files = {
-        "fanart": ["fanart.jpg", "fanart.png"],
+        "fanart": ["fanart.jpg", "fanart.png", "backdrop.jpg", "backdrop.png"],
         "poster": ["poster.jpg", "poster.png"]
     }
     fanart_exist = any((path / img).exists() for img in image_files["fanart"])
