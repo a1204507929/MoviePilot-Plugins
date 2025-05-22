@@ -396,22 +396,38 @@ def __scrape_dir(self, path: Path, mtype: MediaType):
         skip_metadata = nfo_exist
         # 单独跳过图片刮削
         skip_images = fanart_exist and poster_exist
-
-    # ================== 元数据刮削逻辑 ================== 
-    if self._mode or not skip_metadata:
-        if tmdbid:
-            # [保持原有tmdbid识别逻辑]...
-        else:
-            # [保持原有名称识别逻辑]...
         
-        if not mediainfo:
-            logger.warn(f"未识别到媒体信息：{path}")
-            return
-
-        # [保持原有SCRAP_FOLLOW_TMDB逻辑]...
+if self._mode or not skip_metadata:
+    # ================== 元数据识别逻辑 ==================
+    if tmdbid:
+        # 使用nfo中的tmdbid识别
+        logger.info(f"读取到本地nfo文件的tmdbid：{tmdbid}")
+        mediainfo = self.chain.recognize_media(tmdbid=tmdbid, mtype=mtype)
     else:
-        logger.info(f"已存在nfo文件，跳过元数据刮削：{path}")
-        mediainfo = None  # 需要初始化变量
+        # 使用路径名称识别
+        meta = MetaInfoPath(path)
+        meta.type = mtype  # 保持路径指定的媒体类型
+        mediainfo = self.chain.recognize_media(meta=meta)
+    
+    # 检查是否识别成功
+    if not mediainfo:
+        logger.warn(f"未识别到媒体信息：{path}")
+        return
+
+    # ================== 历史记录处理逻辑 ==================
+    # 如果未开启跟随TMDB更新，则使用历史记录中的标题
+    if not settings.SCRAP_FOLLOW_TMDB:
+        transfer_history = self.transferhis.get_by_type_tmdbid(
+            tmdbid=mediainfo.tmdb_id,
+            mtype=mediainfo.type.value
+        )
+        if transfer_history:
+            logger.debug(f"使用历史记录标题：{transfer_history.title}")
+            mediainfo.title = transfer_history.title
+else:
+    logger.info(f"已存在nfo文件，跳过元数据刮削：{path}")
+    mediainfo = None  # 初始化变量防止后续报错
+
 
     # ================== 图片刮削逻辑 ================== 
     if self._mode or not skip_images:
